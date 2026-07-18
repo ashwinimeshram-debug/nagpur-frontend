@@ -10,6 +10,7 @@ import {
   arrayMove,
   verticalListSortingStrategy
 } from "@dnd-kit/sortable";
+import { backendAssetUrl } from "@/lib/api";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -19,9 +20,6 @@ export default function PropertyDetail() {
   const [form, setForm] = useState<any>({});
   const [nav, setNav] = useState<any>({});
   const [loading, setLoading] = useState(true);
-
-  const [contact, setContact] = useState(null);
-  const [loadingContact, setLoadingContact] = useState(false);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -53,24 +51,7 @@ export default function PropertyDetail() {
     }
   };
 
-  // Fetch Contact Details
-  const fetchContactDetails = async () => {
-  try {
-    setLoadingContact(true);
-
-    const res = await API.get(`/admin/property/${id}/contacts`);
-
-    setContact(res.data.contacts[0] || null);
-
-  } catch (err) {
-    console.error("Contact fetch error:", err);
-  } finally {
-    setLoadingContact(false);
-  }
-  };
-
-
-  // Delete Property
+  // 🔥 FETCH NAVIGATION
   const handleDelete = async () => {
   try {
     await API.delete(`/admin/property/${id}`);
@@ -104,12 +85,28 @@ export default function PropertyDetail() {
 
   // 🔥 SAVE
   const handleSave = async () => {
+    if (!form.title?.trim()) {
+      alert("Title is required");
+      return;
+    }
+    if (!form.price || Number(form.price) <= 0) {
+      alert("Valid price is required");
+      return;
+    }
+    if (!form.location?.trim()) {
+      alert("Location is required");
+      return;
+    }
+
     try {
       await API.put(`/admin/property/${id}`, form);
       alert("Saved successfully");
+      fetchProperty();
     } catch (err: any) {
       if (err?.response?.status === 401) {
         router.replace("/admin");
+      } else {
+        alert(err.response?.data?.error || "Save failed");
       }
     }
   };
@@ -238,7 +235,7 @@ export default function PropertyDetail() {
                 <div key={img.id} className="relative cursor-move">
 
                   <img
-                    src={`http://localhost:5000/${img.url}`}
+                    src={backendAssetUrl(img.url)}
                     className="w-full h-32 object-cover rounded"
                   />
 
@@ -265,56 +262,13 @@ export default function PropertyDetail() {
         </DndContext>
       </div>
 
-      {/* USER INFO
-      <div className="bg-white p-4 rounded-xl shadow mb-6">
-        <h2 className="font-semibold mb-3">User Details</h2>
-
-        <p><strong>Name:</strong> {property.user?.name || "-"}</p>
-        <p><strong>Email:</strong> {property.user?.email || "-"}</p>
-        <p><strong>Phone:</strong> {property.user?.phone || "-"}</p>
-      </div> */}
-
       {/* USER INFO */}
       <div className="bg-white p-4 rounded-xl shadow mb-6">
-
-        {/* 🔝 Header + Button */}
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="font-semibold">User Details</h2>
-
-          <button
-            onClick={fetchContactDetails}
-            className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700"
-          >
-            {loadingContact ? "Loading..." : "Fetch Details"}
-          </button>
-        </div>
-
-        {/* 👇 Contact Data */}
-        <p><strong>Name:</strong> {contact?.name || "-"}</p>
-        <p><strong>Email:</strong> {contact?.email || "-"}</p>
-        <p><strong>Phone:</strong> {contact?.mobile || "-"}</p>
-
+        <h2 className="font-semibold mb-3">User Details</h2>
+        <p><strong>Name:</strong> {property.name || "-"}</p>
+        <p><strong>Email:</strong> {property.email || "-"}</p>
+        <p><strong>Phone:</strong> {property.phone || "-"}</p>
       </div>
-
-      {/* FORM
-      <div className="grid grid-cols-2 gap-4 bg-white p-6 rounded-xl shadow">
-
-        <input name="title" value={form.title || ""} onChange={handleChange} className="border p-2 rounded" />
-        <input name="price" value={form.price || ""} onChange={handleChange} className="border p-2 rounded" />
-
-        <input name="location" value={form.location || ""} onChange={handleChange} className="border p-2 rounded" />
-        <input name="city" value={form.city || ""} onChange={handleChange} className="border p-2 rounded" />
-
-        <input name="state" value={form.state || ""} onChange={handleChange} className="border p-2 rounded" />
-        <input name="pincode" value={form.pincode || ""} onChange={handleChange} className="border p-2 rounded" />
-
-        <input name="bedrooms" value={form.bedrooms || ""} onChange={handleChange} className="border p-2 rounded" />
-        <input name="bathrooms" value={form.bathrooms || ""} onChange={handleChange} className="border p-2 rounded" />
-
-        <input name="area" value={form.area || ""} onChange={handleChange} className="border p-2 rounded" />
-
-        <textarea name="description" value={form.description || ""} onChange={handleChange} className="border p-2 rounded col-span-2" />
-      </div> */}
 
       {/* FORM */}
       <div className="grid grid-cols-2 gap-4 bg-white p-6 rounded-xl shadow">
@@ -342,54 +296,6 @@ export default function PropertyDetail() {
           onChange={handleChange}
           className="border p-2 rounded"
         />
-
-        {/* <input
-          name="city"
-          placeholder="Enter city"
-          value={form.city || ""}
-          onChange={handleChange}
-          className="border p-2 rounded"
-        />
-
-        <input
-          name="state"
-          placeholder="Enter state"
-          value={form.state || ""}
-          onChange={handleChange}
-          className="border p-2 rounded"
-        />
-
-        <input
-          name="pincode"
-          placeholder="Enter pincode"
-          value={form.pincode || ""}
-          onChange={handleChange}
-          className="border p-2 rounded"
-        />
-
-        <input
-          name="bedrooms"
-          placeholder="Number of bedrooms"
-          value={form.bedrooms || ""}
-          onChange={handleChange}
-          className="border p-2 rounded"
-        />
-
-        <input
-          name="bathrooms"
-          placeholder="Number of bathrooms"
-          value={form.bathrooms || ""}
-          onChange={handleChange}
-          className="border p-2 rounded"
-        />
-
-        <input
-          name="area"
-          placeholder="Area in sq.ft"
-          value={form.area || ""}
-          onChange={handleChange}
-          className="border p-2 rounded"
-        /> */}
 
         <textarea
           name="description"
@@ -428,7 +334,6 @@ export default function PropertyDetail() {
           </button>
         )}
 
-        {/* ✅ ✅ ADD MODAL HERE (VERY BOTTOM) */}
         {showDeleteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             

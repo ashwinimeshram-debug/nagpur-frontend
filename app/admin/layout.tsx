@@ -1,79 +1,10 @@
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import { useRouter, usePathname } from "next/navigation";
-// import API from "@/lib/api";
-
-// import AdminTopbar from "@/components/admin/AdminTopbar";
-
-// export default function AdminLayout({
-//   children,
-// }: {
-//   children: React.ReactNode;
-// }) {
-//   const router = useRouter();
-//   const pathname = usePathname();
-
-//   const [loading, setLoading] = useState(true);
-
-//   const isLoginPage = pathname === "/admin";
-
-//   useEffect(() => {
-//     // ✅ SKIP CHECK FOR LOGIN PAGE
-//     if (isLoginPage) {
-//       setLoading(false);
-//       return;
-//     }
-
-//     // 🔒 VERIFY ADMIN SESSION
-//     API.get("/admin/verify")
-//       .then(() => setLoading(false))
-//       .catch(() => {
-//         router.replace("/admin");
-//       });
-
-//     // 🔒 BLOCK BACK BUTTON
-//     window.history.pushState(null, "", window.location.href);
-//     window.onpopstate = () => {
-//       window.history.go(1);
-//     };
-//   }, [pathname]);
-
-//   // 🔄 PREVENT FLASH
-//   if (loading) {
-//     return (
-//       <div className="flex items-center justify-center h-screen text-gray-500">
-//         Checking authentication...
-//       </div>
-//     );
-//   }
-
-//   // ✅ LOGIN PAGE (NO TOPBAR)
-//   if (isLoginPage) {
-//     return <>{children}</>;
-//   }
-
-//   // 🔒 PROTECTED ADMIN UI
-//   return (
-//     <div className="flex">
-//       <div className="flex-1 flex flex-col min-h-screen bg-gray-100">
-
-//         {/* <AdminTopbar /> */}
-
-//         <div className="p-6">{children}</div>
-
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import API from "@/lib/api";
-
 import AdminTopbar from "@/components/admin/AdminTopbar";
+import Sidebar from "@/components/admin/Sidebar";
 
 export default function AdminLayout({
   children,
@@ -82,35 +13,44 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-
-  const [authorized, setAuthorized] = useState(false);
-
   const isLoginPage = pathname === "/admin";
 
+  const [authorized, setAuthorized] = useState(false);
+  const [loading, setLoading] = useState(!isLoginPage);
+
   useEffect(() => {
-    // ✅ LOGIN PAGE → SKIP CHECK
     if (isLoginPage) {
       setAuthorized(true);
+      setLoading(false);
       return;
     }
 
-    // 🔒 STRICT VERIFY
-    const verify = async () => {
+    const checkAuth = async () => {
       try {
-        await API.get("/admin/verify");
+        await API.get("/admin/check-auth");
         setAuthorized(true);
       } catch {
-        // 🚨 FORCE LOGOUT + REDIRECT
         await API.post("/admin/logout").catch(() => {});
         router.replace("/admin");
+      } finally {
+        setLoading(false);
       }
     };
 
-    verify();
-  }, [pathname]);
+    checkAuth();
+  }, [isLoginPage, router]);
 
-  // 🚫 BLOCK RENDER UNTIL VERIFIED
-  if (!authorized) {
+  // Track page visits
+  useEffect(() => {
+    if (isLoginPage) return;
+    API.post("/analytics/visit", { page_url: pathname }).catch(() => {});
+  }, [pathname, isLoginPage]);
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  if (loading || !authorized) {
     return (
       <div className="flex items-center justify-center h-screen">
         Loading...
@@ -118,19 +58,12 @@ export default function AdminLayout({
     );
   }
 
-  // ✅ LOGIN PAGE (NO ADMIN UI)
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
-
   return (
-    <div className="flex">
-      <div className="flex-1 flex flex-col min-h-screen bg-gray-100">
-
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
         <AdminTopbar />
-
-        <div className="p-6">{children}</div>
-
+        <div className="p-6 flex-1">{children}</div>
       </div>
     </div>
   );

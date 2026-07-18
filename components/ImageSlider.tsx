@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { backendAssetUrl } from "@/lib/api";
 
 export default function ImageSlider({
   images,
@@ -37,8 +38,8 @@ export default function ImageSlider({
       {/* MAIN IMAGE */}
       <div className="relative overflow-hidden rounded-xl">
         <img
-          src={`http://127.0.0.1:5000/${images[index]}`}
-          className={`w-full object-cover ${
+          src={backendAssetUrl(images[index])}
+          className={`w-full object-cover object-top ${
             small ? "h-[180px]" : "h-[400px] md:h-[500px]"
           }`}
         />
@@ -69,9 +70,9 @@ export default function ImageSlider({
           {images.map((img, i) => (
             <img
               key={i}
-              src={`http://127.0.0.1:5000/${img}`}
+              src={backendAssetUrl(img)}
               onClick={() => setIndex(i)}
-              className={`h-20 w-28 object-cover rounded cursor-pointer border ${
+              className={`h-20 w-28 object-cover object-top rounded cursor-pointer border ${
                 index === i ? "border-blue-500" : "border-gray-200"
               }`}
             />

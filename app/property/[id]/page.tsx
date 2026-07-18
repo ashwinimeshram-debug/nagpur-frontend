@@ -4,10 +4,22 @@ import { useEffect, useState } from "react";
 import API from "@/lib/api";
 import { useParams } from "next/navigation";
 import ImageSlider from "@/components/ImageSlider";
+import Link from "next/link";
 
 export default function PropertyDetail() {
   const { id } = useParams();
   const [property, setProperty] = useState<any>(null);
+  const [allIds, setAllIds] = useState<number[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", mobile: "" });
+
+  useEffect(() => {
+    API.get("/properties")
+      .then((res) => setAllIds(res.data.map((p: any) => p.id)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -16,6 +28,32 @@ export default function PropertyDetail() {
         .catch((err) => console.error(err));
     }
   }, [id]);
+
+  const currentIndex = allIds.indexOf(Number(id));
+  const prevId = currentIndex > 0 ? allIds[currentIndex - 1] : null;
+  const nextId = currentIndex < allIds.length - 1 ? allIds[currentIndex + 1] : null;
+
+  const handleContact = async () => {
+    if (!form.name.trim() || !form.mobile.trim()) {
+      alert("Name and mobile are required");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await API.post(`/property/${id}/contact`, form);
+      setSubmitted(true);
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Something went wrong");
+    }
+    setSubmitting(false);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSubmitted(false);
+    setForm({ name: "", email: "", mobile: "" });
+  };
 
   if (!property) {
     return <div className="p-10">Loading...</div>;
@@ -52,41 +90,132 @@ export default function PropertyDetail() {
               {property.description || "No description available"}
             </p>
           </div>
+
+          {/* CONNECT BUTTON */}
+          <button
+            onClick={() => setShowModal(true)}
+            className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+          >
+            Connect
+          </button>
         </div>
 
       </div>
 
-      {/* OWNER DETAILS BELOW */}
-      {/* <div className="bg-white p-6 mt-6 rounded-xl shadow max-w-xl">
-        <h3 className="text-lg font-bold mb-4">Contact Owner</h3>
+      {/* CONTACT MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
 
-        <p className="text-gray-700 mb-2">
-          👤 {property.contact?.name || "Owner"}
-        </p>
+            {/* CLOSE */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ✕
+            </button>
 
-        <p className="text-gray-700 mb-4">
-          📞 {property.contact?.mobile || "Not Available"}
-        </p>
+            {submitted ? (
+              /* SUCCESS STATE */
+              <div className="text-center py-8">
+                <div className="text-5xl mb-4">✓</div>
+                <h3 className="text-xl font-bold text-green-600 mb-2">Thank You!</h3>
+                <p className="text-gray-500 mb-6">
+                  We have received your interest. Our team will contact you shortly.
+                </p>
+                <button
+                  onClick={closeModal}
+                  className="bg-gray-200 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              /* FORM STATE */
+              <>
+                <h3 className="text-xl font-bold mb-1">Interested in this property?</h3>
+                <p className="text-gray-500 text-sm mb-5">
+                  {property.title} — ₹{property.price}
+                </p>
 
-        OPTIONAL BUTTONS (UNCOMMENT IF NEEDED)
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Your Name *"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    disabled={submitting}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  />
 
-        <a
-          href={`https://wa.me/${property.contact?.mobile}?text=${encodeURIComponent(
-            `🏡 Hi, I'm interested in your property: ${property.title} in ${property.location} for ₹${property.price}`
-          )}`}
-          target="_blank"
-          className="block w-full bg-green-500 text-white text-center py-3 rounded-lg mb-3"
-        >
-          WhatsApp Owner
-        </a>
+                  <input
+                    type="email"
+                    placeholder="Email (optional)"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    disabled={submitting}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  />
 
-        <a
-          href={`tel:${property.contact?.mobile}`}
-          className="block w-full bg-blue-600 text-white text-center py-3 rounded-lg"
-        >
-          Call Now
-        </a>
-      </div> */}
+                  <input
+                    type="tel"
+                    placeholder="Mobile Number *"
+                    value={form.mobile}
+                    onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                    disabled={submitting}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  />
+
+                  <button
+                    onClick={handleContact}
+                    disabled={submitting}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? "Sending..." : "Submit"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PREV / NEXT NAVIGATION */}
+      {allIds.length > 1 && (
+        <div className="flex justify-between items-center mt-8">
+          {prevId ? (
+            <Link
+              href={`/property/${prevId}`}
+              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-blue-400 text-gray-700 px-5 py-2.5 rounded-lg shadow-sm transition"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Previous
+            </Link>
+          ) : (
+            <div />
+          )}
+
+          <span className="text-sm text-gray-400">
+            {currentIndex + 1} / {allIds.length}
+          </span>
+
+          {nextId ? (
+            <Link
+              href={`/property/${nextId}`}
+              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-blue-400 text-gray-700 px-5 py-2.5 rounded-lg shadow-sm transition"
+            >
+              Next
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          ) : (
+            <div />
+          )}
+        </div>
+      )}
 
     </div>
   );

@@ -1,12 +1,13 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState } from "react";
 import API from "@/lib/api";
 import { useSearchParams } from "next/navigation";
 import PropertyCard from "@/components/PropertyCard";
 import SearchBar from "@/components/SearchBar";
 
-export default function Properties() {
+function PropertiesContent() {
   const [properties, setProperties] = useState([]);
   const searchParams = useSearchParams();
 
@@ -20,18 +21,25 @@ export default function Properties() {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Properties</h2>
       {/* SEARCH BAR */}
-      <div className="mt-6">
+      <div>
         <SearchBar />
       </div>
 
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
         {properties.map((p: any) => (
           <PropertyCard key={p.id} p={p} />
         ))}
       </div>
     </div>
+  );
+}
+
+export default function Properties() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <PropertiesContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
+import API from "@/lib/api";
 
 export default function LayoutWrapper({
   children,
@@ -12,13 +14,17 @@ export default function LayoutWrapper({
 
   const isAdminRoute = pathname.startsWith("/admin");
 
+  // Track public page visits
+  useEffect(() => {
+    if (isAdminRoute) return;
+    API.post("/analytics/visit", { page_url: pathname }).catch(() => {});
+  }, [pathname, isAdminRoute]);
+
   return (
     <>
-      {/* ✅ Hide navbar on admin routes */}
       {!isAdminRoute && <Navbar />}
 
       {children}
     </>
   );
 }
-

@@ -1,54 +1,3 @@
-// "use client";
-
-// import { useState, useEffect } from "react";
-// import API from "@/lib/api";
-
-// export default function AdvantagesCMS() {
-//   const [items, setItems] = useState<any[]>([]);
-//   const [form, setForm] = useState({
-//     title: "",
-//     description: "",
-//   });
-
-//   const fetchData = () => {
-//     API.get("/advantages").then((res) => setItems(res.data));
-//   };
-
-//   useEffect(() => {
-//     fetchData();
-//   }, []);
-
-//   const handleSubmit = async () => {
-//     await API.post("/admin/advantages", form);
-//     setForm({ title: "", description: "" });
-//     fetchData();
-//   };
-
-//   return (
-//     <div className="p-6">
-//       <h1 className="text-xl font-bold mb-4">Advantages</h1>
-
-//       <div className="grid gap-3 mb-6">
-//         <input placeholder="Title" onChange={(e) => setForm({ ...form, title: e.target.value })} />
-//         <textarea placeholder="Description" onChange={(e) => setForm({ ...form, description: e.target.value })} />
-
-//         <button onClick={handleSubmit} className="bg-blue-600 text-white py-2 rounded">
-//           Add Advantage
-//         </button>
-//       </div>
-
-//       <div className="grid md:grid-cols-3 gap-4">
-//         {items.map((a, i) => (
-//           <div key={i} className="bg-white p-3 shadow rounded">
-//             <p className="font-bold">{a.title}</p>
-//             <p className="text-sm">{a.description}</p>
-//           </div>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -74,7 +23,6 @@ export default function AdvantagesCMS() {
     fetchData();
   }, []);
 
-  // 🔥 ADD / UPDATE
   const handleSubmit = async () => {
     try {
       if (editingId) {
@@ -91,7 +39,6 @@ export default function AdvantagesCMS() {
     }
   };
 
-  // 🔥 EDIT
   const handleEdit = (item: any) => {
     setForm({
       title: item.title,
@@ -100,7 +47,6 @@ export default function AdvantagesCMS() {
     setEditingId(item.id);
   };
 
-  // 🔥 DELETE
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this item?")) return;
 
@@ -111,7 +57,7 @@ export default function AdvantagesCMS() {
   return (
     <div className="p-6">
 
-      {/* 🔥 HEADER */}
+      {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
 
         {/* LEFT: Back Button */}
@@ -131,7 +77,7 @@ export default function AdvantagesCMS() {
         <div className="w-[90px]" />
       </div>
 
-      {/* 🔥 FORM */}
+      {/* FORM */}
       <div className="grid gap-3 mb-6 bg-white p-4 rounded shadow">
 
         <input
@@ -173,7 +119,7 @@ export default function AdvantagesCMS() {
         )}
       </div>
 
-      {/* 🔥 LIST */}
+      {/* LIST */}
       <div className="grid md:grid-cols-3 gap-4">
         {items.length > 0 ? (
           items.map((a) => (

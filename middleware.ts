@@ -4,21 +4,23 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("access_token_cookie")?.value;
+  const token = request.cookies.get("access_token_cookie");
 
-  const { pathname } = request.nextUrl;
+  const path = request.nextUrl.pathname;
 
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isLoginPage = pathname === "/admin";
+  const isAdminRoute = path.startsWith("/admin");
+  const isLoginPage = path === "/admin";
 
-  // 🔒 NOT LOGGED IN → BLOCK ADMIN PAGES
+  // 🔒 Not logged in → block protected pages
   if (isAdminRoute && !isLoginPage && !token) {
-    return NextResponse.redirect(new URL("/admin", request.url));
+    return NextResponse.redirect(new URL("/admin", request.url)); // ✅ FIXED
   }
 
-  // 🔒 LOGGED IN → PREVENT LOGIN PAGE ACCESS
+  // 🔒 Already logged in → prevent login page
   if (isLoginPage && token) {
-    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    return NextResponse.redirect(
+      new URL("/admin/dashboard", request.url)
+    );
   }
 
   return NextResponse.next();

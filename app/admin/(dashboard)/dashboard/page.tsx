@@ -1,34 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import API from "@/lib/api";
 import { useRouter } from "next/navigation";
+import API from "@/lib/api";
 
 export default function Dashboard() {
+  const router = useRouter();
+
   const [properties, setProperties] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+
   const [sortKey, setSortKey] = useState("id");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const router = useRouter();
+
   const [currentPage, setCurrentPage] = useState(1);
+
   const itemsPerPage = 10;
-
-
 
   useEffect(() => {
     fetchProperties();
   }, []);
 
-  // useEffect(() => {
-  //   applyFilters();
-  // }, [search, filter, properties]);
-
   useEffect(() => {
-  applyFilters();
+    applyFilters();
   }, [properties, search, filter, sortKey, sortOrder]);
 
   const fetchProperties = async () => {
@@ -36,8 +34,10 @@ export default function Dashboard() {
       const res = await API.get("/admin/properties");
       setProperties(res.data);
     } catch (err) {
-      console.error(err);
-      router.push("/admin/dashboard");
+      console.error("Failed to fetch properties:", err);
+
+      // Session expired or unauthorized
+      router.push("/admin");
     } finally {
       setLoading(false);
     }
@@ -52,150 +52,180 @@ export default function Dashboard() {
     }
   };
 
-  // 🔍 FILTER LOGIC
-
   const applyFilters = () => {
-  let data = [...properties];
+    let data = [...properties];
 
-  // 🔍 SEARCH
-  if (search) {
-    data = data.filter((p: any) =>
-      p.title.toLowerCase().includes(search.toLowerCase())
-    );
-  }
-
-  // 🎯 FILTER
-  if (filter === "approved") {
-    data = data.filter((p: any) => p.status === "approved");
-  } else if (filter === "pending") {
-    data = data.filter((p: any) => p.status === "pending");
-  }else if (filter === "rejected") {
-    data = data.filter((p: any) => p.status === "rejected");
-  } else if (filter === "closed") {
-    data = data.filter((p: any) => p.is_closed);
-  } 
-
-  // 🔽 SORTING (ADD THIS PART)
-  data.sort((a: any, b: any) => {
-    let valA = a[sortKey];
-    let valB = b[sortKey];
-
-    // handle boolean
-    if (sortKey === "is_closed" || sortKey === "is_featured") {
-      valA = valA ? 1 : 0;
-      valB = valB ? 1 : 0;
+    // Search
+    if (search.trim()) {
+      data = data.filter((property: any) =>
+        property.title.toLowerCase().includes(search.toLowerCase())
+      );
     }
 
-    // handle string
-    if (typeof valA === "string") valA = valA.toLowerCase();
-    if (typeof valB === "string") valB = valB.toLowerCase();
+    // Status Filter
+    switch (filter) {
+      case "approved":
+        data = data.filter(
+          (property: any) => property.status === "approved"
+        );
+        break;
 
-    if (valA < valB) return sortOrder === "asc" ? -1 : 1;
-    if (valA > valB) return sortOrder === "asc" ? 1 : -1;
-    return 0;
-  });
+      case "pending":
+        data = data.filter(
+          (property: any) => property.status === "pending"
+        );
+        break;
 
-  setFiltered(data);
+      case "rejected":
+        data = data.filter(
+          (property: any) => property.status === "rejected"
+        );
+        break;
+
+      case "closed":
+        data = data.filter(
+          (property: any) => property.is_closed
+        );
+        break;
+
+      default:
+        break;
+    }
+
+    data.sort((a: any, b: any) => {
+      let valueA = a[sortKey];
+      let valueB = b[sortKey];
+
+      if (
+        sortKey === "is_closed" ||
+        sortKey === "is_featured"
+      ) {
+        valueA = valueA ? 1 : 0;
+        valueB = valueB ? 1 : 0;
+      }
+
+      if (typeof valueA === "string") {
+        valueA = valueA.toLowerCase();
+      }
+
+      if (typeof valueB === "string") {
+        valueB = valueB.toLowerCase();
+      }
+
+      if (valueA < valueB) {
+        return sortOrder === "asc" ? -1 : 1;
+      }
+
+      if (valueA > valueB) {
+        return sortOrder === "asc" ? 1 : -1;
+      }
+
+      return 0;
+    });
+
+    setFiltered(data);
   };
 
-  // const applyFilters = () => {
-  //   let data = [...properties];
-
-  //   // Search
-  //   if (search) {
-  //     data = data.filter((p) =>
-  //       p.title.toLowerCase().includes(search.toLowerCase())
-  //     );
-  //   }
-
-  //   // Status filters
-  //   if (filter === "approved") {
-  //     data = data.filter((p) => p.status === "approved");
-  //   } else if (filter === "rejected") {
-  //     data = data.filter((p) => p.status === "rejected");
-  //   } else if (filter === "closed") {
-  //     data = data.filter((p) => p.is_closed);
-  //   }
-
-  //   setFiltered(data);
-  // };
-
-  // column header sort function
   const handleSort = (key: string) => {
-  if (sortKey === key) {
-    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-  } else {
-    setSortKey(key);
-    setSortOrder("asc");
-  }
+    if (sortKey === key) {
+      setSortOrder((previous) =>
+        previous === "asc" ? "desc" : "asc"
+      );
+    } else {
+      setSortKey(key);
+      setSortOrder("asc");
+    }
   };
 
   const startIndex = (currentPage - 1) * itemsPerPage;
+
   const paginatedData = filtered.slice(
     startIndex,
     startIndex + itemsPerPage
   );
 
-  // 📊 Stats
   const total = properties.length;
-  const approved = properties.filter(p => p.status === "approved").length;
-  const rejected = properties.filter(p => p.status === "rejected").length;
-  const closed = properties.filter(p => p.is_closed).length;
-  const pendingCount = properties.filter((p: any) => p.status === "pending").length;
 
+  const approved = properties.filter(
+    (property) => property.status === "approved"
+  ).length;
 
+  const pendingCount = properties.filter(
+    (property: any) => property.status === "pending"
+  ).length;
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  const rejected = properties.filter(
+    (property) => property.status === "rejected"
+  ).length;
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+  const closed = properties.filter(
+    (property) => property.is_closed
+  ).length;
 
-      {/* 📊 Stats Cards */}
-      {/* <div className="grid grid-cols-4 gap-4 mb-6"> */}
+  if (loading) {
+    return <div className="p-6">Loading...</div>;
+  }
+    return (
+    <div className="p-6">
+
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+      </div>
+
+      {/* Statistics */}
       <div className="grid grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow">
-          <h3 className="text-gray-500">Total</h3>
-          <p className="text-2xl font-bold">{total}</p>
+
+        <div className="bg-white rounded-xl shadow p-4">
+          <p className="text-gray-500 text-sm">Total</p>
+          <h2 className="text-2xl font-bold">{total}</h2>
         </div>
 
-        <div className="bg-green-100 p-4 rounded-xl shadow">
-          <h3 className="text-gray-500">Approved</h3>
-          <p className="text-2xl font-bold">{approved}</p>
+        <div className="bg-green-100 rounded-xl shadow p-4">
+          <p className="text-gray-500 text-sm">Approved</p>
+          <h2 className="text-2xl font-bold text-green-700">
+            {approved}
+          </h2>
         </div>
 
-        <div className="bg-yellow-100 p-4 rounded shadow">
-          <p className="text-sm text-gray-600">Pending</p>
-          <h2 className="text-xl font-bold text-yellow-700">
+        <div className="bg-yellow-100 rounded-xl shadow p-4">
+          <p className="text-gray-500 text-sm">Pending</p>
+          <h2 className="text-2xl font-bold text-yellow-700">
             {pendingCount}
           </h2>
         </div>
 
-        <div className="bg-red-100 p-4 rounded-xl shadow">
-          <h3 className="text-gray-500">Rejected</h3>
-          <p className="text-2xl font-bold">{rejected}</p>
+        <div className="bg-red-100 rounded-xl shadow p-4">
+          <p className="text-gray-500 text-sm">Rejected</p>
+          <h2 className="text-2xl font-bold text-red-700">
+            {rejected}
+          </h2>
         </div>
 
-        <div className="bg-gray-200 p-4 rounded-xl shadow">
-          <h3 className="text-gray-500">Closed</h3>
-          <p className="text-2xl font-bold">{closed}</p>
+        <div className="bg-gray-200 rounded-xl shadow p-4">
+          <p className="text-gray-500 text-sm">Closed</p>
+          <h2 className="text-2xl font-bold">
+            {closed}
+          </h2>
         </div>
+
       </div>
 
-      {/* 🔍 SEARCH + FILTER */}
-      <div className="flex justify-between mb-4 gap-4">
+      {/* Search & Filter */}
+
+      <div className="flex justify-between gap-4 mb-6">
+
         <input
           type="text"
-          placeholder="Search by title..."
+          placeholder="Search property title..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border p-2 rounded w-1/3"
+          className="border rounded-lg p-2 w-1/3"
         />
 
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="border p-2 rounded"
+          className="border rounded-lg p-2"
         >
           <option value="all">All</option>
           <option value="approved">Approved</option>
@@ -203,161 +233,237 @@ export default function Dashboard() {
           <option value="rejected">Rejected</option>
           <option value="closed">Closed</option>
         </select>
+
       </div>
 
-      {/* 📋 Table */}
-      <div className="bg-white rounded-xl shadow overflow-hidden">
+      {/* Property Table */}
+
+      <div className="bg-white rounded-xl shadow overflow-x-auto">
+
         <table className="w-full">
-          {/* <thead className="bg-gray-100 text-left">
-            <tr>
-              <th className="p-3">ID</th>
-              <th className="p-3">Title</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Closed</th>
-              <th className="p-3">Featured</th>
-              <th className="p-3">Actions</th>
-            </tr>
-          </thead> */}
-          <thead className="bg-gray-100 text-left">
+
+          <thead className="bg-gray-100">
+
             <tr>
 
-              <th onClick={() => handleSort("id")} className="p-3 cursor-pointer">
-                ID ⬍
+              <th className="p-3 text-left">
+                #
               </th>
 
-              <th onClick={() => handleSort("title")} className="p-3 cursor-pointer">
+              <th
+                onClick={() => handleSort("title")}
+                className="p-3 text-left cursor-pointer"
+              >
                 Title ⬍
               </th>
 
-              <th onClick={() => handleSort("status")} className="p-3 cursor-pointer">
+              <th
+                onClick={() => handleSort("status")}
+                className="p-3 text-left cursor-pointer"
+              >
                 Status ⬍
               </th>
 
-              <th onClick={() => handleSort("is_closed")} className="p-3 cursor-pointer">
+              <th
+                onClick={() => handleSort("is_closed")}
+                className="p-3 text-left cursor-pointer"
+              >
                 Closed ⬍
               </th>
 
-              <th onClick={() => handleSort("is_featured")} className="p-3 cursor-pointer">
+              <th
+                onClick={() => handleSort("is_featured")}
+                className="p-3 text-left cursor-pointer"
+              >
                 Featured ⬍
               </th>
 
-              <th className="p-3">Actions</th>
+              <th className="p-3 text-left">
+                User
+              </th>
+
+              <th className="p-3 text-left">
+                Actions
+              </th>
 
             </tr>
+
           </thead>
 
           <tbody>
-            {/* {filtered.map((p) => ( */}
-            {paginatedData.map((p) => (
-              <tr key={p.id} className="border-t hover:bg-gray-50">
-                
-                <td className="p-3">{p.id}</td>
+
+            {paginatedData.map((property, index) => (
+
+              <tr
+                key={property.id}
+                className="border-t hover:bg-gray-50"
+              >
 
                 <td className="p-3">
-                  <a
-                    href={`/admin/properties/${p.id}`}
-                    className="text-blue-600 hover:underline font-medium"
-                  >
-                    {p.title}
-                  </a>
+                  {startIndex + index + 1}
                 </td>
 
                 <td className="p-3">
+
+                  <a
+                    href={`/admin/properties/${property.id}`}
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    {property.title}
+                  </a>
+
+                </td>
+
+                <td className="p-3">
+
                   <span
                     className={`px-3 py-1 rounded text-white text-sm ${
-                      p.status === "approved"
+                      property.status === "approved"
                         ? "bg-green-500"
-                        : p.status === "rejected"
+                        : property.status === "rejected"
                         ? "bg-red-500"
                         : "bg-yellow-500"
                     }`}
                   >
-                    {p.status}
+                    {property.status}
                   </span>
+
                 </td>
 
                 <td className="p-3">
+
                   <span
                     className={`px-3 py-1 rounded text-white text-sm ${
-                      p.is_closed ? "bg-gray-600" : "bg-blue-500"
+                      property.is_closed
+                        ? "bg-gray-600"
+                        : "bg-blue-500"
                     }`}
                   >
-                    {p.is_closed ? "Closed" : "Open"}
+                    {property.is_closed ? "Closed" : "Open"}
                   </span>
+
                 </td>
 
                 <td className="p-3">
+
                   <button
-                    onClick={() => handleAction(p.id, "feature")}
-                    className={`w-12 h-6 flex items-center rounded-full p-1 ${
-                      p.is_featured ? "bg-yellow-400" : "bg-gray-300"
+                    onClick={() =>
+                      handleAction(property.id, "feature")
+                    }
+                    className={`w-12 h-6 rounded-full flex items-center p-1 transition ${
+                      property.is_featured
+                        ? "bg-yellow-400"
+                        : "bg-gray-300"
                     }`}
                   >
+
                     <div
-                      className={`bg-white w-4 h-4 rounded-full shadow transform ${
-                        p.is_featured ? "translate-x-6" : ""
+                      className={`bg-white w-4 h-4 rounded-full shadow transform transition ${
+                        property.is_featured
+                          ? "translate-x-6"
+                          : ""
                       }`}
                     />
+
                   </button>
+
+                </td>
+
+                <td className="p-3 text-sm text-gray-600">
+                  {property.uploader_name || "-"}
                 </td>
 
                 <td className="p-3 space-x-2">
+
                   <button
-                    onClick={() => handleAction(p.id, "approve")}
-                    className="bg-green-500 text-white px-3 py-1 rounded"
+                    onClick={() =>
+                      handleAction(property.id, "approve")
+                    }
+                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
                   >
                     Approve
                   </button>
 
                   <button
-                    onClick={() => handleAction(p.id, "reject")}
-                    className="bg-red-500 text-white px-3 py-1 rounded"
+                    onClick={() =>
+                      handleAction(property.id, "reject")
+                    }
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
                   >
                     Reject
                   </button>
 
-                  {p.is_closed ? (
+                  {property.is_closed ? (
+
                     <button
-                      onClick={() => handleAction(p.id, "reopen")}
-                      className="bg-blue-500 text-white px-3 py-1 rounded"
+                      onClick={() =>
+                        handleAction(property.id, "reopen")
+                      }
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
                     >
                       Reopen
                     </button>
+
                   ) : (
+
                     <button
-                      onClick={() => handleAction(p.id, "close")}
-                      className="bg-gray-700 text-white px-3 py-1 rounded"
+                      onClick={() =>
+                        handleAction(property.id, "close")
+                      }
+                      className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded"
                     >
                       Close
                     </button>
+
                   )}
+
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Delete "${property.title}"? This will permanently remove the property and all its images.`)) return;
+                      try {
+                        await API.delete(`/admin/property/${property.id}`);
+                        fetchProperties();
+                      } catch (err: any) {
+                        alert(err.response?.data?.error || "Delete failed. Property must be closed first.");
+                      }
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                  >
+                    Delete
+                  </button>
+
                 </td>
 
               </tr>
+
             ))}
+
           </tbody>
+
         </table>
+        
+
       </div>
 
-            <div className="flex justify-center mt-6 gap-2">
-              {Array.from(
-                { length: Math.ceil(filtered.length / itemsPerPage) },
-                (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === i + 1
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              )}
-            </div>
-
+            {/* Pagination */}
+      <div className="flex justify-center items-center gap-2 mt-6">
+        {Array.from(
+          { length: Math.ceil(filtered.length / itemsPerPage) },
+          (_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentPage(index + 1)}
+              className={`px-3 py-1 rounded-md transition ${
+                currentPage === index + 1
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 hover:bg-gray-300"
+              }`}
+            >
+              {index + 1}
+            </button>
+          )
+        )}
+      </div>
     </div>
   );
 }

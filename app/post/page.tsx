@@ -1,17 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import API from "@/lib/api";
 
 export default function PostProperty() {
   const [form, setForm] = useState<any>({});
   const [files, setFiles] = useState<File[]>([]);
   const [index, setIndex] = useState(0);
-  const [submitted, setSubmitted] = useState(false); // code for disble submit button
+  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const previewUrls = useMemo(() => {
+    return files.map((file) => URL.createObjectURL(file));
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
   const handleSubmit = async () => {
-    // ✅ Validation
     if (!form.mobile && !form.email) {
       alert("Please provide Mobile or Email");
       return;
@@ -21,6 +30,8 @@ export default function PostProperty() {
       alert("Please fill all required fields");
       return;
     }
+
+    setLoading(true);
 
     const formData = new FormData();
 
@@ -35,10 +46,11 @@ export default function PostProperty() {
     try {
       const res = await API.post("/submit-property", formData);
       alert(res.data.message);
-      // 👉 code for disable submit button
-    setSubmitted(true);
+      setSubmitted(true);
     } catch (err: any) {
       alert(err.response?.data?.error || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,7 +106,7 @@ export default function PostProperty() {
             }
           >
             <option value="">Select Sell / Rent</option>
-            <option value="buy">Sell</option>
+            <option value="sell">Sell</option>
             <option value="rent">Rent</option>
           </select>
 
@@ -116,7 +128,6 @@ export default function PostProperty() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
 
-          {/* ✅ EMAIL FIELD */}
           <input
             className="w-full border p-2 mb-3 rounded"
             placeholder="Email (optional)"
@@ -128,13 +139,6 @@ export default function PostProperty() {
             placeholder="Mobile Number"
             onChange={(e) => setForm({ ...form, mobile: e.target.value })}
           />
-
-          {/* <button
-            onClick={handleSubmit}
-            className="bg-green-500 text-white px-4 py-3 rounded w-full mt-3"
-          >
-            Submit Property
-          </button> */}
         </div>
 
         {/* ================= RIGHT SIDE ================= */}
@@ -147,7 +151,7 @@ export default function PostProperty() {
 
             {files.length > 0 ? (
               <img
-                src={URL.createObjectURL(files[index])}
+                src={previewUrls[index]}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -175,10 +179,10 @@ export default function PostProperty() {
 
           {/* THUMBNAILS */}
           <div className="flex gap-2 mt-4 overflow-x-auto">
-            {files.map((file, i) => (
+            {previewUrls.map((url, i) => (
               <img
                 key={i}
-                src={URL.createObjectURL(file)}
+                src={url}
                 onClick={() => setIndex(i)}
                 className={`h-20 w-28 object-cover rounded cursor-pointer border ${
                   index === i ? "border-blue-500" : "border-gray-200"
@@ -218,11 +222,10 @@ export default function PostProperty() {
 
           <button
             onClick={handleSubmit}
-            disabled={loading || submitted} // 👉 code for disable submit button
+            disabled={loading || submitted}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded w-full mt-3 disabled:bg-gray-400"
-            // className="bg-green-500 text-white px-4 py-3 rounded w-full mt-3"
           >
-            Submit Property
+            {loading ? "Submitting..." : submitted ? "Submitted" : "Submit Property"}
           </button>
 
         </div>
